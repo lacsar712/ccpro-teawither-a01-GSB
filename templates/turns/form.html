@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}{% if object %}编辑节拍账{% else %}新建节拍账{% endif %}{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>{% if object %}编辑翻堆节拍账{% else %}新建翻堆节拍账{% endif %}</h1>
+  <a class="btn btn-secondary" href="{% url 'turn_list' %}">返回列表</a>
+</div>
+<div class="card">
+  <form method="post" class="form-grid">
+    {% csrf_token %}
+    {% for field in form %}
+    <div class="form-row">
+      <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+      {{ field }}
+      {{ field.errors }}
+    </div>
+    {% endfor %}
+    {{ form.non_field_errors }}
+    <p class="muted">仅「萎凋中」的槽位可建账；同一槽位内翻堆序号从 1 起且唯一。实做时刻与销账标记由列表页「销账」动作写入。</p>
+    <button class="btn" type="submit">保存</button>
+  </form>
+</div>
+{% endblock %}

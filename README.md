@@ -53,8 +53,14 @@ python manage.py runserver 0.0.0.0:4100
 1. **Garden（茶园）**：`name`、`altitudeBand`、`notes`
 2. **Trough（萎凋槽）**：归属茶园、`troughCode`、`cultivar`、`loadKg`、状态 `loading|withering|ready`；同一茶园内槽位编号唯一
 3. **WitherBatch（萎凋批次）**：归属槽位、`startedAt`、`targetMoisture`、`actualMoisture`（可空）、`rollGrade`
+4. **TurnLedger（翻堆节拍账）**：账挂槽位、`seq`（翻堆序号，同槽内从 1 起且唯一）、`plannedAt`（计划翻堆时刻）、`actualAt`（实做时刻，可空）、`operator`（当班人）、`isSettled`（是否销账）
 
-**业务规则**：将槽位状态设为 `ready`（可下槽）时，若最新批次的 `actualMoisture` 为空或大于 40，抛出中文 `ValidationError`。
+**业务规则**：
+
+- 将槽位状态设为 `ready`（可下槽）时，若最新批次的 `actualMoisture` 为空或大于 40，抛出中文 `ValidationError`。
+- 新建翻堆节拍账时，槽位须正处于「萎凋中」；「装叶中」「可下槽」两种槽态一律不准建账。
+- 销账动作（列表页「销账」按钮，`POST /turns/<id>/settle/`）写入实做时刻：实做不得早于计划翻堆时刻，且在同一事务内核对最新批次已有实测含水率，缺则拒绝销账。
+- 槽位存在未销账条数（> 0）时，不得改为「可下槽」，表单给出中文「待销账」说明；「销账是否完成」与「改态是否放行」走同一查询函数 `Trough.unsettled_turn_count()`。
 
 ## 种子数据
 
@@ -62,7 +68,7 @@ python manage.py runserver 0.0.0.0:4100
 python manage.py seed_data
 ```
 
-幂等：已有茶园则只保证账号存在。亦可在环境变量 `TEAWITHER_AUTO_SEED=1` 时于 `post_migrate` 自动播种。
+幂等：已有茶园则只保证账号存在；另保证「云雾岭一号园 A-01」槽挂有两条未销账的翻堆节拍账（第 1、2 翻）。亦可在环境变量 `TEAWITHER_AUTO_SEED=1` 时于 `post_migrate` 自动播种。
 
 ## 目录结构
 

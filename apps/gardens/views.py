@@ -1,10 +1,12 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.core.exceptions import ValidationError
 from django.http import HttpResponse
-from django.shortcuts import redirect, render
+from django.shortcuts import get_object_or_404, redirect, render
 from django.template.loader import render_to_string
 from django.urls import reverse_lazy
+from django.views import View
 from django.views.generic import (
     CreateView,
     DeleteView,
@@ -12,8 +14,8 @@ from django.views.generic import (
     UpdateView,
 )
 
-from .forms import GardenForm, TroughForm, WitherBatchForm
-from .models import Garden, Trough, WitherBatch
+from .forms import GardenForm, TroughForm, TurnLedgerForm, WitherBatchForm
+from .models import Garden, Trough, TurnLedger, WitherBatch
 
 
 def _wants_htmx(request):
@@ -200,3 +202,77 @@ class BatchDeleteView(LoginRequiredMixin, DeleteView):
     def form_valid(self, form):
         messages.success(self.request, "萎凋批次已删除")
         return super().form_valid(form)
+
+
+# ---- TurnLedger（翻堆节拍账） ----
+
+
+class TurnLedgerListView(LoginRequiredMixin, ListView):
+    model = TurnLedger
+    template_name = "turns/list.html"
+    context_object_name = "turns"
+
+    def get_queryset(self):
+        return TurnLedger.objects.select_related("trough", "trough__garden").all()
+
+    def get(self, request, *args, **kwargs):
+        self.object_list = self.get_queryset()
+        if _wants_htmx(request):
+            html = render_to_string(
+                "turns/_table.html",
+                {"turns": self.object_list},
+                request=request,
+            )
+            return HttpResponse(html)
+        return super().get(request, *args, **kwargs)
+
+
+class TurnLedgerCreateView(LoginRequiredMixin, CreateView):
+    model = TurnLedger
+    form_class = TurnLedgerForm
+    template_name = "turns/form.html"
+    success_url = reverse_lazy("turn_list")
+
+    def form_valid(self, form):
+        messages.success(self.request, "翻堆节拍账已创建")
+        return super().form_valid(form)
+
+
+class TurnLedgerUpdateView(LoginRequiredMixin, UpdateView):
+    model = TurnLedger
+    form_class = TurnLedgerForm
+    template_name = "turns/form.html"
+    success_url = reverse_lazy("turn_list")
+
+    def form_valid(self, form):
+        messages.success(self.request, "翻堆节拍账已更新")
+        return super().form_valid(form)
+
+
+class TurnLedgerDeleteView(LoginRequiredMixin, DeleteView):
+    model = TurnLedger
+    template_name = "turns/confirm_delete.html"
+    success_url = reverse_lazy("turn_list")
+
+    def form_valid(self, form):
+        messages.success(self.request, "翻堆节拍账已删除")
+        return super().form_valid(form)
+
+
+class TurnLedgerSettleView(LoginRequiredMixin, View):
+    """销账动作：写入实做时刻，同事务核对最新批次实测含水。"""
+
+    def post(self, request, pk):
+        entry = get_object_or_404(TurnLedger, pk=pk)
+        try:
+            entry.settle()
+        except ValidationError as exc:
+            messages.error(request, "；".join(exc.messages))
+        else:
+            messages.success(
+                request, f"{entry.trough} 第 {entry.seq} 翻已销账"
+            )
+        return redirect("turn_list")
+
+    def get(self, request, pk):
+        return redirect("turn_list")

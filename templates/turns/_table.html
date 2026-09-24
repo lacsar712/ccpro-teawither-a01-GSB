@@ -1,0 +1,45 @@
+{% if turns %}
+<table class="data">
+  <thead>
+    <tr>
+      <th>茶园/槽位</th>
+      <th>翻堆序号</th>
+      <th>计划翻堆时刻</th>
+      <th>实做时刻</th>
+      <th>当班人</th>
+      <th>是否销账</th>
+      <th>操作</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for e in turns %}
+    <tr>
+      <td>{{ e.trough.garden.name }} / {{ e.trough.troughCode }}</td>
+      <td>第 {{ e.seq }} 翻</td>
+      <td>{{ e.plannedAt|date:"Y-m-d H:i" }}</td>
+      <td>{% if e.actualAt %}{{ e.actualAt|date:"Y-m-d H:i" }}{% else %}—{% endif %}</td>
+      <td>{{ e.operator }}</td>
+      <td>
+        {% if e.isSettled %}
+        <span class="badge badge-settled">已销账</span>
+        {% else %}
+        <span class="badge badge-pending">待销账</span>
+        {% endif %}
+      </td>
+      <td class="actions">
+        {% if not e.isSettled %}
+        <form method="post" action="{% url 'turn_settle' e.pk %}" style="display:inline">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-sm">销账</button>
+        </form>
+        {% endif %}
+        <a class="btn btn-sm btn-secondary" href="{% url 'turn_edit' e.pk %}">编辑</a>
+        <a class="btn btn-sm btn-danger" href="{% url 'turn_delete' e.pk %}">删除</a>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p class="empty">暂无翻堆节拍账。</p>
+{% endif %}

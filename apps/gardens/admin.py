@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Garden, Trough, WitherBatch
+from .models import Garden, Trough, TurnLedger, WitherBatch
 
 
 @admin.register(Garden)
@@ -27,3 +27,18 @@ class WitherBatchAdmin(admin.ModelAdmin):
         "rollGrade",
     )
     list_filter = ("rollGrade",)
+
+
+@admin.register(TurnLedger)
+class TurnLedgerAdmin(admin.ModelAdmin):
+    list_display = (
+        "id",
+        "trough",
+        "seq",
+        "plannedAt",
+        "actualAt",
+        "operator",
+        "isSettled",
+    )
+    list_filter = ("isSettled",)
+    search_fields = ("trough__troughCode", "operator")
