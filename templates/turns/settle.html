@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}翻堆销账{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>翻堆销账</h1>
+  <a class="btn btn-secondary" href="{% url 'turn_list' %}">返回列表</a>
+</div>
+<div class="card">
+  <p>
+    槽位：<strong>{{ ledger.trough.garden.name }} / {{ ledger.trough.troughCode }}</strong>　·
+    第 {{ ledger.sequence }} 次翻堆　·　当班人：{{ ledger.operator }}
+  </p>
+  <p class="muted">计划翻堆时刻：{{ ledger.plannedAt|date:"Y-m-d H:i" }}</p>
+  <p class="muted">销账将在同一事务内核对该槽最新批次的实测含水率；缺测或实做时刻早于计划均拒绝销账。</p>
+  <form method="post" class="form-grid">
+    {% csrf_token %}
+    {% for field in form %}
+    <div class="form-row">
+      <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+      {{ field }}
+      {{ field.errors }}
+    </div>
+    {% endfor %}
+    {{ form.non_field_errors }}
+    <div class="actions">
+      <button class="btn" type="submit">确认销账</button>
+      <a class="btn btn-secondary" href="{% url 'turn_list' %}">取消</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

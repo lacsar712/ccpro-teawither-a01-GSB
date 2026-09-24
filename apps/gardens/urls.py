@@ -40,4 +40,7 @@ urlpatterns = [
         views.BatchDeleteView.as_view(),
         name="batch_delete",
     ),
+    path("turns/", views.TurnLedgerListView.as_view(), name="turn_list"),
+    path("turns/new/", views.TurnLedgerCreateView.as_view(), name="turn_create"),
+    path("turns/<int:pk>/settle/", views.turn_settle, name="turn_settle"),
 ]

@@ -3,7 +3,7 @@ from decimal import Decimal
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 
-from .models import Garden, Trough, WitherBatch
+from .models import Garden, Trough, TurnLedger, WitherBatch
 
 
 def ensure_seed_data():
@@ -92,3 +92,21 @@ def ensure_seed_data():
     )
     t4.status = Trough.STATUS_READY
     t4.save()
+
+    # 翻堆节拍账：一槽两条未销账（账挂 t1，未销账前 t1 不得改可下槽）。
+    TurnLedger.objects.create(
+        trough=t1,
+        sequence=1,
+        plannedAt=now - timezone.timedelta(hours=10),
+        doneAt=None,
+        operator="witherer",
+        settled=False,
+    )
+    TurnLedger.objects.create(
+        trough=t1,
+        sequence=2,
+        plannedAt=now - timezone.timedelta(hours=4),
+        doneAt=None,
+        operator="witherer",
+        settled=False,
+    )

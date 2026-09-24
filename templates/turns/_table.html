@@ -1,0 +1,42 @@
+{% if ledgers %}
+<table class="data">
+  <thead>
+    <tr>
+      <th>所属槽位</th>
+      <th>翻堆序号</th>
+      <th>计划翻堆时刻</th>
+      <th>实做时刻</th>
+      <th>当班人</th>
+      <th>销账状态</th>
+      <th>操作</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for l in ledgers %}
+    <tr>
+      <td>{{ l.trough.garden.name }} / {{ l.trough.troughCode }}</td>
+      <td>第 {{ l.sequence }} 次</td>
+      <td>{{ l.plannedAt|date:"Y-m-d H:i" }}</td>
+      <td>{% if l.doneAt %}{{ l.doneAt|date:"Y-m-d H:i" }}{% else %}—{% endif %}</td>
+      <td>{{ l.operator }}</td>
+      <td>
+        {% if l.settled %}
+        <span class="badge badge-settled">已销账</span>
+        {% else %}
+        <span class="badge badge-open-turn">待销账</span>
+        {% endif %}
+      </td>
+      <td class="actions">
+        {% if not l.settled %}
+        <a class="btn btn-sm" href="{% url 'turn_settle' l.pk %}">销账</a>
+        {% else %}
+        <span class="muted">已结清</span>
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p class="empty">暂无翻堆节拍账。</p>
+{% endif %}

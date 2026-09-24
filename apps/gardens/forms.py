@@ -1,6 +1,7 @@
 from django import forms
+from django.utils import timezone
 
-from .models import Garden, Trough, WitherBatch
+from .models import Garden, Trough, TurnLedger, WitherBatch
 
 
 class GardenForm(forms.ModelForm):
@@ -60,7 +61,65 @@ class WitherBatchForm(forms.ModelForm):
             "%Y-%m-%d %H:%M",
         ]
         if self.instance and self.instance.pk and self.instance.startedAt:
-            from django.utils import timezone
-
             local = timezone.localtime(self.instance.startedAt)
             self.initial["startedAt"] = local.strftime("%Y-%m-%dT%H:%M")
+
+
+class TurnLedgerCreateForm(forms.ModelForm):
+    """建账：只录槽位、计划翻堆时刻、当班人；序号自动从 1 起递增。"""
+
+    class Meta:
+        model = TurnLedger
+        fields = ["trough", "plannedAt", "operator"]
+        widgets = {
+            "trough": forms.Select(attrs={"class": "input"}),
+            "plannedAt": forms.DateTimeInput(
+                attrs={"class": "input", "type": "datetime-local"},
+                format="%Y-%m-%dT%H:%M",
+            ),
+            "operator": forms.TextInput(attrs={"class": "input"}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["plannedAt"].input_formats = [
+            "%Y-%m-%dT%H:%M",
+            "%Y-%m-%d %H:%M:%S",
+            "%Y-%m-%d %H:%M",
+        ]
+        # 仅萎凋中的槽位可建账；模型层 clean 仍做最终强制校验。
+        self.fields["trough"].queryset = Trough.objects.filter(
+            status=Trough.STATUS_WITHERING
+        ).select_related("garden")
+        if not self.initial.get("plannedAt"):
+            self.initial["plannedAt"] = timezone.localtime(timezone.now()).strftime(
+                "%Y-%m-%dT%H:%M"
+            )
+
+
+class TurnLedgerSettleForm(forms.Form):
+    """销账：确认实做时刻（默认当前时刻），不得早于计划翻堆时刻。"""
+
+    doneAt = forms.DateTimeField(
+        label="实做时刻",
+        required=False,
+        widget=forms.DateTimeInput(
+            attrs={"class": "input", "type": "datetime-local"},
+            format="%Y-%m-%dT%H:%M",
+        ),
+        input_formats=[
+            "%Y-%m-%dT%H:%M",
+            "%Y-%m-%d %H:%M:%S",
+            "%Y-%m-%d %H:%M",
+        ],
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if not self.initial.get("doneAt"):
+            self.initial["doneAt"] = timezone.localtime(timezone.now()).strftime(
+                "%Y-%m-%dT%H:%M"
+            )
+
+    def clean_doneAt(self):
+        return self.cleaned_data["doneAt"] or timezone.now()
